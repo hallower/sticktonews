@@ -1,4 +1,4 @@
-package kr.blogspot.charlie0301.stickttonews;
+package kr.blogspot.charlie0301.stickttonews.util;
 
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -8,6 +8,7 @@ import android.util.Log;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import kr.blogspot.charlie0301.stickttonews.MainActivity;
 import kr.blogspot.charlie0301.stickttonews.models.News;
 
 /**
@@ -19,7 +20,7 @@ public class GetNewsDetail extends AsyncTask<String, Void, News>
 	static private String LOG_TAG = "GetNewsID";
 
 	private Handler handler;
-	GetNewsDetail(Handler handler)
+	public GetNewsDetail(Handler handler)
 	{
 		this.handler = handler;
 	}

@@ -5,10 +5,14 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.widget.NestedScrollView;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,21 +22,34 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import kr.blogspot.charlie0301.stickttonews.models.News;
+import kr.blogspot.charlie0301.stickttonews.util.GetNewsDetail;
+import kr.blogspot.charlie0301.stickttonews.util.GetNewsID;
+import kr.blogspot.charlie0301.stickttonews.view.CustomNestedScrollView;
 
 public class MainActivity extends AppCompatActivity {
 
 	private static final String LOG_TAG = "StickToNews";
 	private static final String whooingURL = "https://whooing.com";
 
-	private MainHandler handler = new MainHandler();
+	// TODO : adjust
+	public static final int CONTENT_REQUEST_AT_ONCE = 15;
 
-	public static final int CMD_GET_NEWS_ID = 1111;
-	public static final int CMD_GET_NEWS = 2222;
+	public static final int CMD_BASE  = 1230;
+	public static final int CMD_TOAST_LONG = CMD_BASE + 2;
+	public static final int CMD_TOAST_SHORT = CMD_BASE + 4;
+	public static final int CMD_GET_NEWS_ID = CMD_BASE + 6;
+	public static final int CMD_GET_NEWS = CMD_BASE + 8;
+
+	private MainHandler handler = new MainHandler();
+ 	private CoordinatorLayout coordinatorLayout;
+	private TextView tv;
 
 	private ArrayList<String> newsIDs = new ArrayList<>();
 	private HashMap<String, News> newsContents = new HashMap<>();
+	private HashSet<String> gettingInProgress = new HashSet<>();
 
 	private int currPos;
 
@@ -47,36 +64,60 @@ public class MainActivity extends AppCompatActivity {
 		fab.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-						.setAction("Action", null).show();
+				sm(CMD_TOAST_LONG, getString(R.string.notice_recommend_news));
 			}
 		});
 
+		coordinatorLayout = (CoordinatorLayout) findViewById(R.id.condinator);
+
+		((CustomNestedScrollView)findViewById(R.id.scrollview)).setOnHorizontalScrollListener(
+				new CustomNestedScrollView.OnHorizontalScrollListener() {
+			@Override
+			public void onHorizontalScroll(NestedScrollView v, boolean isLeft) {
+				movePage(isLeft);
+			}
+		});
+
+		tv = (TextView)findViewById(R.id.txt_main);
+		tv.setMovementMethod(LinkMovementMethod.getInstance());
+
 		currPos = 0;
-		GetNewsID(null);
+		getNewsID(null);
 	}
 
-	void GetNewsID(String from) {
+	void setContents(News news){
+		tv.setText(Html.fromHtml(news.toString()));
+	}
+
+	void getNewsID(String from) {
+		sm(CMD_TOAST_LONG, getString(R.string.notice_getting_more));
 		GetNewsID getNewsID = new GetNewsID(handler);
-		getNewsID.execute();
+		getNewsID.execute(from);
 	}
 
-	void GetNewsDetail(String id){
+	void getNewsDetail(String id){
 		GetNewsDetail getNewsDetail = new GetNewsDetail(handler);
 		getNewsDetail.execute(id);
 	}
 
-	boolean MovePage(boolean prev)
+	boolean movePage(boolean prev)
 	{
 		if(prev) {
 			// left
-			if(currPos == 0)
+			if(currPos == 0){
+				sm(CMD_TOAST_LONG, getString(R.string.notice_no_more_prev));
 				return false;
-
+			}
 			currPos -= 1;
 		} else {
-			if((currPos + 1) == newsIDs.size())
+
+			if((currPos + 5) > newsIDs.size())
+				getNewsID(newsIDs.get(newsIDs.size() - 1));
+
+			if((currPos + 1) == newsIDs.size()){
+				sm(CMD_TOAST_LONG, getString(R.string.notice_no_more_next));
 				return false;
+			}
 			currPos += 1;
 		}
 
@@ -84,12 +125,11 @@ public class MainActivity extends AppCompatActivity {
 		if(newsContents.containsKey(newsID))
 		{
 			News news = newsContents.get(newsID);
-			TextView tv = (TextView)findViewById(R.id.txt_main);
-			tv.setText(news.id + " / " + news.title + " / " + news.description);
+			setContents(news);
 		}
 		else
 		{
-			GetNewsDetail(newsID);
+			getNewsDetail(newsID);
 		}
 		return true;
 	}
@@ -104,16 +144,33 @@ public class MainActivity extends AppCompatActivity {
 
 			switch(command) {
 
+				case CMD_TOAST_LONG:
+					Snackbar.make(coordinatorLayout, obj.toString(), Snackbar.LENGTH_LONG)
+							.setAction("Action", null).show();
+					break;
+
+				case CMD_TOAST_SHORT:
+					Snackbar.make(coordinatorLayout, obj.toString(), Snackbar.LENGTH_SHORT)
+							.setAction("Action", null).show();
+					break;
+
 				case CMD_GET_NEWS_ID:
 
 					Collection<String> ids = (Collection<String>)obj;
 
 					for(String id : ids)
 					{
-						newsIDs.add(id);
+						if(newsContents.containsKey(id) ||
+								newsIDs.contains(id))
+							continue;
 
 						Log.d(LOG_TAG, "New ID = " + id);
-						GetNewsDetail(id);
+						newsIDs.add(id);
+
+						if(false == gettingInProgress.contains(id)){
+							gettingInProgress.add(id);
+							getNewsDetail(id);
+						}
 					}
 
 					break;
@@ -122,12 +179,13 @@ public class MainActivity extends AppCompatActivity {
 					if(obj instanceof News){
 						News news = (News)obj;
 						Log.d(LOG_TAG, "News : " + news.title);
+
+						gettingInProgress.remove(news.id);
 						newsContents.put(news.id, news);
 
 						if(0 == newsIDs.get(currPos).compareTo(news.id))
 						{
-							TextView tv = (TextView)findViewById(R.id.txt_main);
-							tv.setText(news.id + " / " + news.title + " / " + news.description);
+							setContents(news);
 						}
 					}
 

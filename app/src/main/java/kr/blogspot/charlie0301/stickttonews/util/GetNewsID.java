@@ -1,4 +1,4 @@
-package kr.blogspot.charlie0301.stickttonews;
+package kr.blogspot.charlie0301.stickttonews.util;
 
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -12,25 +12,36 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import kr.blogspot.charlie0301.stickttonews.MainActivity;
+
 /**
  * Created by csk on 2017-01-15.
  */
 
-public class GetNewsID extends AsyncTask<Void, Void, Collection<String>>
+public class GetNewsID extends AsyncTask<String , Void, Collection<String>>
 {
 	static private String LOG_TAG = "GetNewsID";
 	private Handler handler;
+	private String requestedLastID = "";
 
-	GetNewsID(Handler handler)
+	public GetNewsID(Handler handler)
 	{
 		super();
 		this.handler = handler;
 	}
 
 	@Override
-	protected Collection<String> doInBackground(Void... voids) {
-		String URL = "https://whooing.com/api/bbs/moneynews.json?limit=5";
+	protected Collection<String> doInBackground(String... strings) {
+		String URL = "https://whooing.com/api/bbs/moneynews.json?limit=" + MainActivity.CONTENT_REQUEST_AT_ONCE;
 		Collection<String> newIDs = new ArrayList<>();
+
+		if(null != strings[0]) {
+			if(0 == requestedLastID.compareTo(strings[0]))
+				return newIDs;
+
+			URL += ("&max=" + strings[0]);
+			requestedLastID = strings[0];
+		}
 
 		JSONObject json = RestAPIInvoker.invokeRESTAPI(RestAPIInvoker.HTTP_METHOD.GET, URL, "");
 		if(null == json){

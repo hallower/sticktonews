@@ -10,6 +10,7 @@ public class News {
 	public String id;
 	public String title;
 	public String description;
+	public String url;
 	public String author;
 
 	public String prevID;
@@ -71,6 +72,9 @@ public class News {
 		id = json.optString("bbs_id");
 		title = json.optString("subject");
 		description = json.optString("contents");
+		if(false == description.isEmpty()){
+			description = description.replaceAll("\\n", "<BR>");
+		}
 
 		try {
 			JSONObject writer = json.getJSONObject("writer");
@@ -98,5 +102,29 @@ public class News {
 		{
 			nextID = "";
 		}
+
+		url = "";
+		int start = description.indexOf("href=") + 6;
+		if(0 < start){
+			int end = description.indexOf('"', start);
+			if(0 < end){
+				url = description.substring(start, end);
+			}
+		}
+	}
+
+	@Override
+	public String toString() {
+		StringBuffer sb = new StringBuffer();
+		sb.append("<h2>");
+		sb.append(title);
+		sb.append("</h2>");
+		sb.append("<br>");
+		sb.append("<h3>");
+		sb.append(author);
+		sb.append("</h3>");
+		sb.append("<br>");
+		sb.append(description);
+		return sb.toString();
 	}
 }

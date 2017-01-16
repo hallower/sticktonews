@@ -1,4 +1,4 @@
-package kr.blogspot.charlie0301.stickttonews;
+package kr.blogspot.charlie0301.stickttonews.util;
 
 import android.util.Log;
 
@@ -8,14 +8,6 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.spi.service.ServiceFinder;
 
 import org.json.JSONObject;
-
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
-
-import kr.blogspot.charlie0301.stickttonews.util.AndroidServiceIteratorProvider;
-import kr.blogspot.charlie0301.stickttonews.util.SSLClientHelper;
-import kr.blogspot.charlie0301.stickttonews.util.Utils;
 
 public class RestAPIInvoker {
 
