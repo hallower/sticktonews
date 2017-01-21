@@ -1,4 +1,4 @@
-package kr.blogspot.charlie0301.stickttonews.util;
+package kr.blogspot.charlie0301.stickttonews.models;
 
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import kr.blogspot.charlie0301.stickttonews.MainActivity;
+import kr.blogspot.charlie0301.stickttonews.util.RestAPIInvoker;
 
 /**
  * Created by csk on 2017-01-15.

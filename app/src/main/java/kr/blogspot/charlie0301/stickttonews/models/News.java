@@ -120,11 +120,11 @@ public class News {
 		sb.append(title);
 		sb.append("</h2>");
 		sb.append("<br>");
-		sb.append("<h3>");
+		sb.append("<h4>");
 		sb.append(author);
-		sb.append("</h3>");
 		sb.append("<br>");
 		sb.append(description);
+		sb.append("</h4>");
 		return sb.toString();
 	}
 }

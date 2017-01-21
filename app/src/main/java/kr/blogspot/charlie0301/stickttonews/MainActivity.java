@@ -8,26 +8,26 @@ import android.os.Message;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
-import android.support.v4.widget.NestedScrollView;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.text.Html;
-import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 
 import kr.blogspot.charlie0301.stickttonews.models.News;
-import kr.blogspot.charlie0301.stickttonews.util.GetNewsDetail;
-import kr.blogspot.charlie0301.stickttonews.util.GetNewsID;
-import kr.blogspot.charlie0301.stickttonews.view.CustomNestedScrollView;
+import kr.blogspot.charlie0301.stickttonews.models.GetNewsDetail;
+import kr.blogspot.charlie0301.stickttonews.models.GetNewsID;
+import kr.blogspot.charlie0301.stickttonews.view.NewsCardAdapter;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -45,13 +45,14 @@ public class MainActivity extends AppCompatActivity {
 
 	private MainHandler handler = new MainHandler();
  	private CoordinatorLayout coordinatorLayout;
-	private TextView tv;
 
-	private ArrayList<String> newsIDs = new ArrayList<>();
-	private HashMap<String, News> newsContents = new HashMap<>();
+	private RecyclerView mRecyclerView;
+	private NewsCardAdapter mAdapter;
+	private LinearLayoutManager mLayoutManager;
+
+	private List<String> newsIDs = new ArrayList<>();
+	private List<News> newsContents = new ArrayList<>();
 	private HashSet<String> gettingInProgress = new HashSet<>();
-
-	private int currPos;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -70,23 +71,36 @@ public class MainActivity extends AppCompatActivity {
 
 		coordinatorLayout = (CoordinatorLayout) findViewById(R.id.condinator);
 
-		((CustomNestedScrollView)findViewById(R.id.scrollview)).setOnHorizontalScrollListener(
-				new CustomNestedScrollView.OnHorizontalScrollListener() {
-			@Override
-			public void onHorizontalScroll(NestedScrollView v, boolean isLeft) {
-				movePage(isLeft);
-			}
-		});
+		mRecyclerView = (RecyclerView) findViewById(R.id.news_recycler_view);
+		mRecyclerView.setHasFixedSize(true);
+		mRecyclerView.setNestedScrollingEnabled(false);
 
-		tv = (TextView)findViewById(R.id.txt_main);
-		tv.setMovementMethod(LinkMovementMethod.getInstance());
+		mLayoutManager = new LinearLayoutManager(this);
+		mRecyclerView.setLayoutManager(mLayoutManager);
 
-		currPos = 0;
+		mAdapter = new NewsCardAdapter(newsContents);
+		mRecyclerView.setAdapter(mAdapter);
+
+		android.support.v4.widget.NestedScrollView scroller = (android.support.v4.widget.NestedScrollView) findViewById(R.id.scrollview);
+
+		if (scroller != null) {
+
+			scroller.setOnScrollChangeListener(new android.support.v4.widget.NestedScrollView.OnScrollChangeListener() {
+				@Override
+				public void onScrollChange(android.support.v4.widget.NestedScrollView v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+
+					if (scrollY == 0) {
+						getNewsID(null);
+					}
+
+					if (scrollY == (v.getChildAt(0).getMeasuredHeight() - v.getMeasuredHeight())) {
+						getNewsID(newsIDs.get(newsIDs.size() - 1));
+					}
+				}
+			});
+		}
+
 		getNewsID(null);
-	}
-
-	void setContents(News news){
-		tv.setText(Html.fromHtml(news.toString()));
 	}
 
 	void getNewsID(String from) {
@@ -98,40 +112,6 @@ public class MainActivity extends AppCompatActivity {
 	void getNewsDetail(String id){
 		GetNewsDetail getNewsDetail = new GetNewsDetail(handler);
 		getNewsDetail.execute(id);
-	}
-
-	boolean movePage(boolean prev)
-	{
-		if(prev) {
-			// left
-			if(currPos == 0){
-				sm(CMD_TOAST_LONG, getString(R.string.notice_no_more_prev));
-				return false;
-			}
-			currPos -= 1;
-		} else {
-
-			if((currPos + 5) > newsIDs.size())
-				getNewsID(newsIDs.get(newsIDs.size() - 1));
-
-			if((currPos + 1) == newsIDs.size()){
-				sm(CMD_TOAST_LONG, getString(R.string.notice_no_more_next));
-				return false;
-			}
-			currPos += 1;
-		}
-
-		String newsID = newsIDs.get(currPos);
-		if(newsContents.containsKey(newsID))
-		{
-			News news = newsContents.get(newsID);
-			setContents(news);
-		}
-		else
-		{
-			getNewsDetail(newsID);
-		}
-		return true;
 	}
 
 	private class MainHandler extends Handler
@@ -160,12 +140,18 @@ public class MainActivity extends AppCompatActivity {
 
 					for(String id : ids)
 					{
-						if(newsContents.containsKey(id) ||
+						if(newsContents.contains(id) ||
 								newsIDs.contains(id))
 							continue;
 
 						Log.d(LOG_TAG, "New ID = " + id);
 						newsIDs.add(id);
+						Collections.sort(newsIDs, new Comparator<String>() {
+							@Override
+							public int compare(String s, String t1) {
+								return t1.compareTo(s);
+							}
+						});
 
 						if(false == gettingInProgress.contains(id)){
 							gettingInProgress.add(id);
@@ -181,12 +167,15 @@ public class MainActivity extends AppCompatActivity {
 						Log.d(LOG_TAG, "News : " + news.title);
 
 						gettingInProgress.remove(news.id);
-						newsContents.put(news.id, news);
+						newsContents.add(news);
+						Collections.sort(newsContents, new Comparator<News>() {
+							@Override
+							public int compare(News s, News t1) {
+								return t1.id.compareTo(s.id);
+							}
+						});
+						mAdapter.notifyDataSetChanged();
 
-						if(0 == newsIDs.get(currPos).compareTo(news.id))
-						{
-							setContents(news);
-						}
 					}
 
 					break;

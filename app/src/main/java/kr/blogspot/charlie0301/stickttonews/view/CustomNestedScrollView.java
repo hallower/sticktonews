@@ -58,14 +58,11 @@ public class CustomNestedScrollView extends android.support.v4.widget.NestedScro
 				totalXV += ev.getX() - ev.getHistoricalX(0);
 
 				elapsedTime = System.currentTimeMillis() - startTime;
-				//Log.d("csk", "touch : " + ", x = " + totalXV + ", y = " + totalYV + "( " + elapsedTime+  "ms )");
 
 				if(Math.abs(totalXV) > Math.abs(totalYV) &&
 						Math.abs(totalXV) > minFlingLength &&
 						elapsedTime > minTime &&
 						elapsedTime < maxTime) {
-
-					Log.d("csk", "FIRE : " + ", x = " + totalXV + ", y = " + totalYV + "( " + elapsedTime+  "ms )");
 
 					if(totalXV > 0) {
 						horizontalScrollListener.onHorizontalScroll(this, true);
